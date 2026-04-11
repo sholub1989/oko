@@ -17,8 +17,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          registry-url: "https://registry.npmjs.org"
+          node-version: 24
 
       - uses: pnpm/action-setup@v4
 
@@ -54,7 +53,7 @@ jobs:
           echo "$PACK_OUTPUT" | grep "npm notice"
 
       - name: Publish to npm
-        run: unset NODE_AUTH_TOKEN && npm publish --provenance --access public
+        run: npm publish --provenance --access public
 
       - name: Create GitHub Release
         env:
