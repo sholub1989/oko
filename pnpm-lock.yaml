@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      better-sqlite3:
+        specifier: ^12.6.2
+        version: 12.6.2
     devDependencies:
       concurrently:
         specifier: ^9.2.1
