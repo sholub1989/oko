@@ -3,6 +3,7 @@
 ## Git Rules
 - NEVER run `git add`, `git commit`, `git push`, or any git write operations unless the user explicitly asks
 - Do not stage files, create commits, or push to remote on your own
+- NEVER add Co-Authored-By or any attribution to commits or PRs
 
 ## Workflow Orchestration
 
@@ -56,8 +57,16 @@ Point at logs, errors, failing tests - then resolve them
 after corrections
 
 ## Releasing
-To cut a new release: `pnpm release <version>` (e.g. `pnpm release 0.3.0`).
-This bumps `package.json`, commits, tags, and pushes in one step. Never manually create tags or bump versions separately — the version in `package.json` must match the tag at build time or the UI will show the wrong version.
+To cut a new release: `pnpm release <version>` (e.g. `pnpm release 0.5.0`).
+This builds, audits the package for source leaks, bumps `package.json`, commits, tags, and pushes.
+CI then automatically publishes to npm and creates a GitHub Release.
+
+**Rules:**
+- NEVER run `npm publish` manually — it is blocked locally and only CI can publish
+- NEVER manually create tags or bump versions separately
+- The version in `package.json` must match the tag at build time or the UI will show the wrong version
+- The npm package name is `oko-sh` — published as closed-source (compiled JS only, no TypeScript source)
+- npm publishing uses Trusted Publishing (OIDC) — no NPM_TOKEN needed, configured on npmjs.com per-package
 
 ## Core Principles
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.

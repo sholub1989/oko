@@ -6,7 +6,7 @@ export default defineConfig({
   target: "node20",
   outDir: "dist",
   clean: true,
-  sourcemap: true,
-  noExternal: ["@oko/shared"],
+  sourcemap: false,
+  noExternal: [/^(?!better-sqlite3).*/],
   external: ["better-sqlite3"],
 });
