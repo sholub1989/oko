@@ -1,5 +1,7 @@
 # OKO
 
+[![npm version](https://img.shields.io/npm/v/oko-sh)](https://www.npmjs.com/package/oko-sh)
+
 Local-first AI-powered observability platform.
 
 <p align="center">
