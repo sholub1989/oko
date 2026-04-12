@@ -2,9 +2,10 @@ import { exec } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CONFIG } from "./config.js";
 
 /** Exit code that signals the launcher to restart the server after an update. */
-export const RESTART_EXIT_CODE = 75;
+export const RESTART_EXIT_CODE = CONFIG.restartExitCode;
 
 interface UpdateStatus {
   available: boolean;
@@ -43,7 +44,7 @@ function isNewerVersion(latest: string, current: string): boolean {
 
 function fetchLatestNpmVersion(): Promise<string | null> {
   return new Promise((resolve) => {
-    exec("npm view oko-sh version", { encoding: "utf-8", timeout: 10_000 }, (err, stdout) => {
+    exec("npm view oko-sh version", { encoding: "utf-8", timeout: CONFIG.npmViewTimeoutMs }, (err, stdout) => {
       if (err) { resolve(null); return; }
       const version = stdout.trim();
       resolve(version || null);

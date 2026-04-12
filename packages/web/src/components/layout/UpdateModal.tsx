@@ -1,5 +1,6 @@
 import { theme } from "../../lib/theme";
 import { trpc } from "../../lib/trpc";
+import { WEB_CONFIG } from "../../lib/config";
 import { Modal } from "../ui/Modal";
 
 interface UpdateModalProps {
@@ -9,7 +10,7 @@ interface UpdateModalProps {
 
 export function UpdateModal({ open, onClose }: UpdateModalProps) {
   const updateCheck = trpc.update.check.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000,
+    staleTime: WEB_CONFIG.updateCheckStaleTimeMs,
   });
 
   return (

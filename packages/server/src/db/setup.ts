@@ -143,9 +143,8 @@ export function runSetup(): void {
   // SQLite doesn't support ALTER TABLE ADD FOREIGN KEY, so we recreate tables.
   migrateForeignKeys();
 
-  // Force direct mode for all users until orchestrator mode is re-introduced.
-  // Users who previously toggled to orchestrator have stale DB values with no UI to change back.
-  sqlite.exec(`DELETE FROM app_settings WHERE key = 'chat_mode'`);
+  // Orchestrator mode is now gated by FEATURES.orchestratorMode in the settings router.
+  // No need to force-delete the chat_mode setting on startup.
 }
 
 function migrateForeignKeys(): void {

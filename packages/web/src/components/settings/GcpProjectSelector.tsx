@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { trpc } from "../../lib/trpc";
+import { WEB_CONFIG } from "../../lib/config";
 import { SearchableSelect } from "../ui/SearchableSelect";
 
 interface GcpProjectSelectorProps {
@@ -9,7 +10,7 @@ interface GcpProjectSelectorProps {
 export function GcpProjectSelector({ existingConfig }: GcpProjectSelectorProps) {
   const utils = trpc.useUtils();
   const { data: projects, isLoading } = trpc.provider.listGcpProjects.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000,
+    staleTime: WEB_CONFIG.updateCheckStaleTimeMs,
   });
   const saveConfig = trpc.provider.saveConfig.useMutation({
     onSuccess: () => {

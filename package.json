@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "predev": "pnpm install --frozen-lockfile 2>/dev/null || pnpm install",
-    "dev": "concurrently -n server,web -c blue,green \"pnpm --filter @oko/server dev\" \"pnpm --filter @oko/web dev\"",
+    "dev": "concurrently --kill-others -n server,web -c blue,green \"pnpm --filter @oko/server dev\" \"pnpm --filter @oko/web dev\"",
     "build": "pnpm --filter @oko/shared build && pnpm --filter @oko/server build && pnpm --filter @oko/web build",
     "start": "node packages/server/dist/index.js",
     "lint": "tsc --noEmit",

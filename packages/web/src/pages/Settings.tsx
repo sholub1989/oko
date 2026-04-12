@@ -2,6 +2,7 @@ import { theme } from "../lib/theme";
 import { AiModelsSection } from "../components/settings/AiModelsSection";
 import { DataProvidersSection } from "../components/settings/DataProvidersSection";
 import { AgentMemorySection } from "../components/settings/AgentMemorySection";
+import { AgentConfigSection } from "../components/settings/AgentConfigSection";
 
 export function Settings() {
   return (
@@ -14,6 +15,11 @@ export function Settings() {
       <div>
         <h3 className={theme.sectionTitle}>Data Providers</h3>
         <DataProvidersSection />
+      </div>
+
+      <div>
+        <h3 className={theme.sectionTitle}>Agent Configuration</h3>
+        <AgentConfigSection />
       </div>
 
       <div>

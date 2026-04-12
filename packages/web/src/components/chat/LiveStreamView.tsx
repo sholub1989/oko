@@ -5,6 +5,7 @@ import { ProgressStore } from "../../lib/progress-store";
 import { MessageParts, ThinkingDots, ScrollToBottomButton } from "./MessageParts";
 import { handleProgressData, normalizeClipboard } from "../../lib/chat-utils";
 import { useChatScroll } from "../../lib/hooks";
+import { WEB_CONFIG } from "../../lib/config";
 
 interface LiveStreamViewProps {
   sessionId: string;
@@ -71,7 +72,7 @@ export function LiveStreamView({ sessionId, initialMessages, onComplete, header,
       }
       // Transient error — allow auto-reconnect, but give up after 3 within 10s
       errorCount++;
-      if (errorCount >= 3) {
+      if (errorCount >= WEB_CONFIG.maxSseErrors) {
         try { ctrl.close(); } catch { /* already closed */ }
         eventSource.close();
         if (!cancelled) onCompleteRef.current();

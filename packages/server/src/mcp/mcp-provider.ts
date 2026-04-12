@@ -16,6 +16,7 @@ import type {
 import { BaseProvider } from "../providers/base.provider.js";
 import type { McpServerDefinition, McpServerEntry } from "./definitions.js";
 import { createMcpChatTools } from "./mcp-tools.js";
+import { CONFIG } from "../config.js";
 
 type McpClient = Awaited<ReturnType<typeof createMCPClient>>;
 
@@ -76,12 +77,10 @@ export class McpProvider extends BaseProvider {
     }
   }
 
-  private static readonly RECONNECT_COOLDOWN_MS = 60_000;
-
   async ping(): Promise<PingResult> {
     if (this.clients.length === 0) {
       const now = Date.now();
-      if (now - this.lastReconnectAttempt < McpProvider.RECONNECT_COOLDOWN_MS) {
+      if (now - this.lastReconnectAttempt < CONFIG.mcpReconnectCooldownMs) {
         return { ok: false, error: "No MCP clients connected" };
       }
       this.lastReconnectAttempt = now;
@@ -94,7 +93,7 @@ export class McpProvider extends BaseProvider {
       await Promise.race([
         Promise.all(this.clients.map((c) => c.tools())),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Ping timed out")), 5_000),
+          setTimeout(() => reject(new Error("Ping timed out")), CONFIG.mcpPingTimeoutMs),
         ),
       ]);
       this.connected = true;
@@ -166,8 +165,6 @@ export class McpProvider extends BaseProvider {
 
   // ── Private ──
 
-  private static readonly INIT_TIMEOUT_MS = 30_000;
-
   /** Spawn MCP clients for all servers in parallel. */
   private async createClients(): Promise<void> {
     const entries = this.definition.servers;
@@ -210,8 +207,8 @@ export class McpProvider extends BaseProvider {
     const clientPromise = createMCPClient({ transport });
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(
-        () => reject(new Error(`MCP server ${entry.package} timed out after ${McpProvider.INIT_TIMEOUT_MS / 1000}s`)),
-        McpProvider.INIT_TIMEOUT_MS,
+        () => reject(new Error(`MCP server ${entry.package} timed out after ${CONFIG.mcpInitTimeoutMs / 1000}s`)),
+        CONFIG.mcpInitTimeoutMs,
       );
     });
 

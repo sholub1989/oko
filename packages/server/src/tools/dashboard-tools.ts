@@ -8,6 +8,7 @@ import type { ChatToolWriter as StreamWriter } from "@oko/shared";
 import { dashboardWidgets, dashboards } from "../db/schema.js";
 import { collectBaseTools } from "./shared-tool-setup.js";
 import { requireTimeRangePlaceholders, executeValidationQuery } from "./query-validation.js";
+import { CONFIG } from "../config.js";
 
 function getWidgetContext(db: Db, dashboardId: string): string {
   const widgets = db.select().from(dashboardWidgets).where(eq(dashboardWidgets.dashboardId, dashboardId)).all();
@@ -55,8 +56,8 @@ export function collectDashboardTools(
         .optional()
         .default("auto")
         .describe("Chart rendering type"),
-      width: z.number().optional().default(6).describe("Grid width (1-12 columns). Always use 6 unless the user explicitly requests a different size."),
-      height: z.number().optional().default(6).describe("Grid height (1-12 rows). Always use 6 unless the user explicitly requests a different size."),
+      width: z.number().optional().default(CONFIG.widgetDefaultWidth).describe(`Grid width (1-${CONFIG.gridColumns} columns). Always use ${CONFIG.widgetDefaultWidth} unless the user explicitly requests a different size.`),
+      height: z.number().optional().default(CONFIG.widgetDefaultHeight).describe(`Grid height (1-${CONFIG.gridColumns} rows). Always use ${CONFIG.widgetDefaultHeight} unless the user explicitly requests a different size.`),
     }),
     execute: async ({ title, query, provider: providerName, chartType, width, height }) => {
       const targetProvider = providerName
@@ -93,8 +94,8 @@ export function collectDashboardTools(
           chartType: chartType ?? "auto",
           posX: 0,
           posY,
-          posW: Math.min(Math.max(width ?? 6, 1), 12),
-          posH: Math.max(height ?? 6, 1),
+          posW: Math.min(Math.max(width ?? CONFIG.widgetDefaultWidth, 1), CONFIG.gridColumns),
+          posH: Math.max(height ?? CONFIG.widgetDefaultHeight, 1),
           createdAt: now,
           updatedAt: now,
         })
@@ -151,7 +152,7 @@ export function collectDashboardTools(
       if (title !== undefined) updates.title = title;
       if (query !== undefined) updates.query = query;
       if (chartType !== undefined) updates.chartType = chartType;
-      if (width !== undefined) updates.posW = Math.min(Math.max(width, 1), 12);
+      if (width !== undefined) updates.posW = Math.min(Math.max(width, 1), CONFIG.gridColumns);
       if (height !== undefined) updates.posH = Math.max(height, 1);
 
       db.update(dashboardWidgets)
@@ -219,8 +220,8 @@ If a tool call fails, retry with a corrected approach. If you fail the same tool
 - "histogram" — for histogram() queries
 
 ## Widget Sizing
-The dashboard uses a 12×12 grid (12 columns, 12 rows fill the viewport). Both axes are responsive to screen size.
-IMPORTANT: Always create widgets at the default size of 6×6 (half width, half height) unless the user explicitly requests a specific size. Do NOT choose a different size on your own — only deviate from 6×6 when the user asks for it.
+The dashboard uses a ${CONFIG.gridColumns}×${CONFIG.gridColumns} grid (${CONFIG.gridColumns} columns, ${CONFIG.gridColumns} rows fill the viewport). Both axes are responsive to screen size.
+IMPORTANT: Always create widgets at the default size of ${CONFIG.widgetDefaultWidth}×${CONFIG.widgetDefaultHeight} (half width, half height) unless the user explicitly requests a specific size. Do NOT choose a different size on your own — only deviate from ${CONFIG.widgetDefaultWidth}×${CONFIG.widgetDefaultHeight} when the user asks for it.
 
 ## Time Range Placeholders (MANDATORY)
 Every query saved to a widget MUST use {{SINCE}} and {{UNTIL}} placeholders instead of literal time values.

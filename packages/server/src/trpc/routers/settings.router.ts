@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { unixNow, DEFAULT_CHAT_MODE } from "@oko/shared";
+import { DEFAULT_CHAT_MODE } from "@oko/shared";
 import { publicProcedure, router } from "../trpc.js";
 import { providerConfigs, appSettings } from "../../db/schema.js";
-import { readProviderConfig, readAppSetting } from "../../db/config-reader.js";
-import { DEFAULT_CHAT_MODEL, type ModelConfig } from "../../llm/resolve.js";
+import { readProviderConfig, readAppSetting, readAppSettings, writeAppSetting } from "../../db/config-reader.js";
+import { CONFIG, DEFAULTS, SETTINGS_KEYS, subAgentModelKey, type ModelConfig } from "../../config.js";
+import { FEATURES } from "../../feature-flags.js";
 
 export const settingsRouter = router({
   getApiKey: publicProcedure
@@ -50,7 +51,7 @@ export const settingsRouter = router({
     }),
 
   getChatModel: publicProcedure.query(({ ctx }) => {
-    return readAppSetting<ModelConfig>(ctx.db, "chat_model") ?? DEFAULT_CHAT_MODEL;
+    return readAppSetting<ModelConfig>(ctx.db, SETTINGS_KEYS.chatModel) ?? CONFIG.defaultChatModel;
   }),
 
   saveChatModel: publicProcedure
@@ -61,42 +62,29 @@ export const settingsRouter = router({
       }),
     )
     .mutation(({ ctx, input }) => {
-      const value = JSON.stringify({ provider: input.provider, modelId: input.modelId });
-      const now = unixNow();
-      ctx.db
-        .insert(appSettings)
-        .values({ key: "chat_model", value, updatedAt: now })
-        .onConflictDoUpdate({
-          target: appSettings.key,
-          set: { value, updatedAt: now },
-        })
-        .run();
+      writeAppSetting(ctx.db, SETTINGS_KEYS.chatModel, { provider: input.provider, modelId: input.modelId });
       return { success: true };
     }),
 
   getChatMode: publicProcedure.query(({ ctx }) => {
-    return readAppSetting<string>(ctx.db, "chat_mode") ?? DEFAULT_CHAT_MODE;
+    if (!FEATURES.orchestratorMode) return DEFAULT_CHAT_MODE;
+    return readAppSetting<string>(ctx.db, SETTINGS_KEYS.chatMode) ?? DEFAULT_CHAT_MODE;
   }),
 
   saveChatMode: publicProcedure
     .input(z.enum(["orchestrator", "direct"]))
     .mutation(({ ctx, input }) => {
-      const now = unixNow();
-      ctx.db
-        .insert(appSettings)
-        .values({ key: "chat_mode", value: JSON.stringify(input), updatedAt: now })
-        .onConflictDoUpdate({
-          target: appSettings.key,
-          set: { value: JSON.stringify(input), updatedAt: now },
-        })
-        .run();
+      if (!FEATURES.orchestratorMode && input === "orchestrator") {
+        return { success: false };
+      }
+      writeAppSetting(ctx.db, SETTINGS_KEYS.chatMode, input);
       return { success: true };
     }),
 
   getSubAgentModel: publicProcedure
     .input(z.string().describe("Provider type, e.g. 'newrelic'"))
     .query(({ ctx, input }) => {
-      return readAppSetting<ModelConfig>(ctx.db, `sub_agent_model:${input}`) ?? null;
+      return readAppSetting<ModelConfig>(ctx.db, subAgentModelKey(input)) ?? null;
     }),
 
   saveSubAgentModel: publicProcedure
@@ -110,24 +98,53 @@ export const settingsRouter = router({
       }),
     )
     .mutation(({ ctx, input }) => {
-      const key = `sub_agent_model:${input.providerType}`;
-      const now = unixNow();
+      const key = subAgentModelKey(input.providerType);
       if (input.model === null) {
-        // Reset to default (Gemini Flash)
-        ctx.db
-          .delete(appSettings)
-          .where(eq(appSettings.key, key))
-          .run();
+        ctx.db.delete(appSettings).where(eq(appSettings.key, key)).run();
       } else {
-        const value = JSON.stringify({ provider: input.model.provider, modelId: input.model.modelId });
-        ctx.db
-          .insert(appSettings)
-          .values({ key, value, updatedAt: now })
-          .onConflictDoUpdate({
-            target: appSettings.key,
-            set: { value, updatedAt: now },
-          })
-          .run();
+        writeAppSetting(ctx.db, key, { provider: input.model.provider, modelId: input.model.modelId });
+      }
+      return { success: true };
+    }),
+
+  featureFlags: publicProcedure.query(() => FEATURES),
+
+  getAgentConfig: publicProcedure.query(({ ctx }) => {
+    const keys = [
+      SETTINGS_KEYS.timezone,
+      SETTINGS_KEYS.directModeMaxSteps,
+      SETTINGS_KEYS.subAgentMaxSteps,
+      SETTINGS_KEYS.thinkingBudgetGoogle,
+      SETTINGS_KEYS.thinkingBudgetAnthropic,
+    ];
+    const vals = readAppSettings(ctx.db, keys);
+    return {
+      timezone: (vals[SETTINGS_KEYS.timezone] as string) ?? DEFAULTS.timezone,
+      directModeMaxSteps: (vals[SETTINGS_KEYS.directModeMaxSteps] as number) ?? DEFAULTS.directModeMaxSteps,
+      subAgentMaxSteps: (vals[SETTINGS_KEYS.subAgentMaxSteps] as number) ?? DEFAULTS.subAgentMaxSteps,
+      thinkingBudgetGoogle: (vals[SETTINGS_KEYS.thinkingBudgetGoogle] as number) ?? DEFAULTS.thinkingBudgetGoogle,
+      thinkingBudgetAnthropic: (vals[SETTINGS_KEYS.thinkingBudgetAnthropic] as number) ?? DEFAULTS.thinkingBudgetAnthropic,
+    };
+  }),
+
+  saveAgentConfig: publicProcedure
+    .input(z.object({
+      timezone: z.string().optional(),
+      directModeMaxSteps: z.number().min(1).max(500).optional(),
+      subAgentMaxSteps: z.number().min(1).max(500).optional(),
+      thinkingBudgetGoogle: z.number().min(0).max(100_000).optional(),
+      thinkingBudgetAnthropic: z.number().min(0).max(100_000).optional(),
+    }))
+    .mutation(({ ctx, input }) => {
+      const entries: [string, unknown][] = [
+        [SETTINGS_KEYS.timezone, input.timezone],
+        [SETTINGS_KEYS.directModeMaxSteps, input.directModeMaxSteps],
+        [SETTINGS_KEYS.subAgentMaxSteps, input.subAgentMaxSteps],
+        [SETTINGS_KEYS.thinkingBudgetGoogle, input.thinkingBudgetGoogle],
+        [SETTINGS_KEYS.thinkingBudgetAnthropic, input.thinkingBudgetAnthropic],
+      ];
+      for (const [key, val] of entries) {
+        if (val !== undefined) writeAppSetting(ctx.db, key, val);
       }
       return { success: true };
     }),

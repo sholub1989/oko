@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Spinner } from "../ui/Spinner";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { trpc } from "../../lib/trpc";
+import { WEB_CONFIG } from "../../lib/config";
 import { ProviderCard } from "./ProviderCard";
 import { ProviderConfigModal } from "./ProviderConfigModal";
 
@@ -26,7 +27,7 @@ export function DataProvidersSection() {
   const { data: configs, isLoading: configsLoading } = trpc.provider.getConfigs.useQuery();
   const { data: registeredTypes, isLoading: typesLoading } = trpc.provider.getRegisteredTypes.useQuery();
   const { data: pingResults } = trpc.provider.ping.useQuery(undefined, {
-    staleTime: 30_000,
+    staleTime: WEB_CONFIG.sessionStaleTimeMs,
     refetchOnMount: "always",
   });
 

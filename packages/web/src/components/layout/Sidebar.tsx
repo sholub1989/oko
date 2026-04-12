@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { usePolling } from "../../lib/hooks";
 import { theme } from "../../lib/theme";
 import { trpc } from "../../lib/trpc";
+import { WEB_CONFIG } from "../../lib/config";
 import { ScrollableList } from "./ScrollableList";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { UpdateModal } from "./UpdateModal";
@@ -35,11 +36,16 @@ const NavIcon = ({ page }: { page: Page }) => {
   }
 };
 
-const navItems: { page: Page; label: string }[] = [
-  // { page: "dashboard", label: "Dashboard" },
-  { page: "debug", label: "Debug" },
-  // { page: "monitors", label: "Monitors" },
-];
+function useNavItems(): { page: Page; label: string }[] {
+  const flags = trpc.settings.featureFlags.useQuery(undefined, {
+    staleTime: Infinity,
+  });
+  return [
+    ...(flags.data?.dashboards ? [{ page: "dashboard" as const, label: "Dashboard" }] : []),
+    { page: "debug" as const, label: "Debug" },
+    ...(flags.data?.monitors ? [{ page: "monitors" as const, label: "Monitors" }] : []),
+  ];
+}
 
 export function Sidebar({
   currentPage,
@@ -51,8 +57,10 @@ export function Sidebar({
   onSelectDashboard,
   onNewDashboard,
 }: SidebarProps) {
+  const navItems = useNavItems();
+
   const sessionsQuery = trpc.sessions.list.useQuery(undefined, {
-    staleTime: 30_000,
+    staleTime: WEB_CONFIG.sessionStaleTimeMs,
   });
   const dashboardsQuery = trpc.dashboards.list.useQuery(undefined, {
     enabled: currentPage === "dashboard",
@@ -65,13 +73,13 @@ export function Sidebar({
   usePolling(() => {
     utils.sessions.activeCount.invalidate();
     if (currentPage === "debug") utils.sessions.list.invalidate();
-  }, 5_000, hasActiveStreams);
+  }, WEB_CONFIG.activeStreamPollingMs, hasActiveStreams);
 
   const shouldPollMonitors = trpc.monitors.shouldPoll.useQuery();
   usePolling(() => {
     utils.monitorAlerts.activeCount.invalidate();
     utils.monitors.shouldPoll.invalidate();
-  }, 60_000, shouldPollMonitors.data ?? false);
+  }, WEB_CONFIG.monitorPollingMs, shouldPollMonitors.data ?? false);
 
   const markViewedMutation = trpc.sessions.markViewed.useMutation();
 
@@ -101,7 +109,7 @@ export function Sidebar({
 
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const updateCheck = trpc.update.check.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000,
+    staleTime: WEB_CONFIG.updateCheckStaleTimeMs,
   });
   const updateAvailable = updateCheck.data?.available === true;
 

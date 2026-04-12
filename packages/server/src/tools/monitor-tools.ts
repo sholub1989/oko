@@ -9,6 +9,7 @@ import { monitors } from "../db/schema.js";
 import { collectBaseTools } from "./shared-tool-setup.js";
 import { validateCondition } from "../monitors/condition.js";
 import { requireTimeRangePlaceholders, executeValidationQuery } from "./query-validation.js";
+import { CONFIG } from "../config.js";
 
 function getMonitorContext(db: Db): string {
   const rows = db.select().from(monitors).orderBy(desc(monitors.updatedAt)).all();
@@ -64,7 +65,7 @@ export function collectMonitorTools(
 
       const id = crypto.randomUUID();
       const now = unixNow();
-      const freq = Math.max(frequencySeconds ?? 60, 30);
+      const freq = Math.max(frequencySeconds ?? 60, CONFIG.monitorMinFrequencySeconds);
 
       db.insert(monitors)
         .values({
@@ -137,7 +138,7 @@ export function collectMonitorTools(
       if (name !== undefined) updates.name = name;
       if (query !== undefined) updates.query = query;
       if (condition !== undefined) updates.condition = condition;
-      if (frequencySeconds !== undefined) updates.frequencySeconds = Math.max(frequencySeconds, 30);
+      if (frequencySeconds !== undefined) updates.frequencySeconds = Math.max(frequencySeconds, CONFIG.monitorMinFrequencySeconds);
 
       db.update(monitors).set(updates).where(eq(monitors.id, id)).run();
 

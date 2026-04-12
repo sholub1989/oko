@@ -1,6 +1,8 @@
+import type { KnownModelId } from "@oko/shared";
+
 interface ModelInfo {
   provider: string;
-  modelId: string;
+  modelId: KnownModelId;
   inputPrice: number;            // $/M tokens
   outputPrice: number;           // $/M tokens
   cacheReadMultiplier: number;   // fraction of inputPrice charged for cached reads
@@ -15,8 +17,6 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
   // Anthropic — 90% discount on cache reads, 25% surcharge on cache writes
   { provider: "anthropic", modelId: "claude-haiku-4-5-20251001",  inputPrice: 0.80,  outputPrice: 4.00,  cacheReadMultiplier: 0.10, cacheWriteMultiplier: 1.25 },
 ];
-
-export const DEFAULT_SUB_AGENT_KEY = "google:gemini-3-flash-preview";
 
 // Build lookup for cost computation
 const pricingLookup = Object.fromEntries(

@@ -17,6 +17,7 @@ import { useChatScroll } from "../../lib/hooks";
 import { MessageParts, ThinkingDots, ScrollToBottomButton } from "./MessageParts";
 import { handleProgressData, normalizeClipboard } from "../../lib/chat-utils";
 import { CopyMessageButton } from "./CopyMessageButton";
+import { WEB_CONFIG } from "../../lib/config";
 
 // ── Variant theme maps ──
 
@@ -159,7 +160,7 @@ export const ChatCore = forwardRef<ChatCoreRef, ChatCoreProps>(
 
     const { messages, setMessages, status, sendMessage, stop, error } = useChat({
       chat,
-      experimental_throttle: 50,
+      experimental_throttle: WEB_CONFIG.chatThrottleMs,
     });
     const sendMessageRef = useRef(sendMessage);
     sendMessageRef.current = sendMessage;

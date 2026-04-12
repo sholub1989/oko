@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { trpc } from "../../lib/trpc";
 import { theme } from "../../lib/theme";
+import { WEB_CONFIG } from "../../lib/config";
 import { GcpProjectPicker } from "./GcpProjectPicker";
 
 const SHORT_LABELS: Record<string, string> = {
@@ -24,12 +25,12 @@ interface ProviderToggleProps {
 
 export function ProviderToggle({ activeProvider, onToggle }: ProviderToggleProps) {
   const { data, isLoading } = trpc.provider.ping.useQuery(undefined, {
-    staleTime: 30_000,
+    staleTime: WEB_CONFIG.sessionStaleTimeMs,
     refetchOnMount: "always",
   });
 
   const { data: configs } = trpc.provider.getConfigs.useQuery(undefined, {
-    staleTime: 60_000,
+    staleTime: WEB_CONFIG.monitorPollingMs,
   });
 
   const connected = sortProviders(data?.filter((p) => p.ok) ?? []);

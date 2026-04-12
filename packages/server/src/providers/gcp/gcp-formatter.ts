@@ -1,6 +1,7 @@
 import { extractMcpContent, isTransportError, detectTruncation } from "../../mcp/mcp-tools.js";
 import type { SubAgentQuery } from "../../agents/chat/sub-agent.js";
 import type { McpProvider } from "../../mcp/mcp-provider.js";
+import { CONFIG } from "../../config.js";
 
 // ── Helpers ──
 
@@ -291,7 +292,7 @@ export function formatGcpResult(toolName: string, data: unknown): string {
 
 // ── GCP-specific MCP tool wrapper ──
 
-const MAX_MODEL_RESULT_CHARS = 8_000;
+const MAX_MODEL_RESULT_CHARS = CONFIG.maxModelResultChars;
 
 
 function buildGcpModelResult(toolName: string, normalized: unknown): string {

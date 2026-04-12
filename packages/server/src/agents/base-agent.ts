@@ -121,7 +121,7 @@ When the user's question spans multiple providers, call the relevant provider to
       : `${basePrompt}\n\nNo observability providers are currently configured. If the user asks about observability data, let them know they can connect providers in the Settings page.`;
   }
 
-  systemPrompt += "\n\n" + getCurrentDateBlock();
+  systemPrompt += "\n\n" + getCurrentDateBlock(context.db);
 
   const result = streamText({
     model,

@@ -1,10 +1,15 @@
-const TIMEZONE = "America/Los_Angeles";
+import { DEFAULTS, SETTINGS_KEYS } from "../config.js";
+import { readAppSetting } from "../db/config-reader.js";
+import type { Db } from "../db/client.js";
 
-/** Returns a short system-prompt block with the current date/time in PST/PDT. */
-export function getCurrentDateBlock(): string {
+/** Returns a short system-prompt block with the current date/time. */
+export function getCurrentDateBlock(db?: Db): string {
+  const timezone = (db ? readAppSetting<string>(db, SETTINGS_KEYS.timezone) : null)
+    ?? process.env.OKO_TIMEZONE
+    ?? DEFAULTS.timezone;
   const now = new Date();
   const formatted = new Intl.DateTimeFormat("en-US", {
-    timeZone: TIMEZONE,
+    timeZone: timezone,
     weekday: "long",
     year: "numeric",
     month: "long",

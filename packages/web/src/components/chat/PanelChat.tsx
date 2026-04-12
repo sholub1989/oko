@@ -1,11 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { theme } from "../../lib/theme";
 import { trpc } from "../../lib/trpc";
+import { WEB_CONFIG } from "../../lib/config";
 import { ChatCore, type ChatCoreRef } from "./ChatCore";
-
-const SIDEBAR_WIDTH = 208; // w-52 in Shell.tsx
-const MIN_WIDTH = 260;
-const MAX_WIDTH_RATIO = 0.8; // never exceed 80% of content area
 
 interface PanelChatProps {
   chatId: string;
@@ -27,7 +24,7 @@ export function PanelChat({
   className,
 }: PanelChatProps) {
   const [panelWidth, setPanelWidth] = useState(() =>
-    Math.floor((window.innerWidth - SIDEBAR_WIDTH) / 2),
+    Math.floor((window.innerWidth - WEB_CONFIG.sidebarWidth) / 2),
   );
   const coreRef = useRef<ChatCoreRef>(null);
   const utils = trpc.useUtils();
@@ -47,9 +44,9 @@ export function PanelChat({
     const startWidth = panelWidthRef.current;
     const onMove = (ev: MouseEvent) => {
       const delta = startX - ev.clientX; // dragging left = wider
-      const contentWidth = window.innerWidth - SIDEBAR_WIDTH;
-      const maxW = Math.floor(contentWidth * MAX_WIDTH_RATIO);
-      setPanelWidth(Math.min(maxW, Math.max(MIN_WIDTH, startWidth + delta)));
+      const contentWidth = window.innerWidth - WEB_CONFIG.sidebarWidth;
+      const maxW = Math.floor(contentWidth * WEB_CONFIG.panelMaxWidthRatio);
+      setPanelWidth(Math.min(maxW, Math.max(WEB_CONFIG.panelMinWidth, startWidth + delta)));
     };
     const onUp = () => {
       document.removeEventListener("mousemove", onMove);

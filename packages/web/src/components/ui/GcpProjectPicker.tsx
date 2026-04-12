@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "../../lib/trpc";
+import { WEB_CONFIG } from "../../lib/config";
 import { useStarred } from "./SearchableSelect";
 
 export interface GcpProjectPickerProps {
@@ -19,7 +20,7 @@ export function GcpProjectPicker({ projectId, existingConfig }: GcpProjectPicker
 
   const utils = trpc.useUtils();
   const { data: projects, isLoading } = trpc.provider.listGcpProjects.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000,
+    staleTime: WEB_CONFIG.updateCheckStaleTimeMs,
     enabled: open,
   });
   const saveConfig = trpc.provider.saveConfig.useMutation({

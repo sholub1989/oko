@@ -4,9 +4,7 @@ import type { Db } from "../db/client.js";
 import type { ProviderRegistry } from "../providers/registry.js";
 import { monitors, monitorAlerts } from "../db/schema.js";
 import { evaluateCondition } from "./condition.js";
-
-const TICK_INTERVAL_MS = 10_000;
-const QUERY_TIMEOUT_MS = 30_000;
+import { CONFIG } from "../config.js";
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -29,11 +27,11 @@ export class MonitorScheduler {
 
   start(): void {
     if (this.interval) return;
-    console.log("MonitorScheduler started (tick every 10s)");
+    console.log(`MonitorScheduler started (tick every ${CONFIG.monitorTickIntervalMs / 1000}s)`);
     this.interval = setInterval(() => {
       if (this.tickPromise) return; // skip if previous tick still running
       this.tickPromise = this.tick().finally(() => { this.tickPromise = null; });
-    }, TICK_INTERVAL_MS);
+    }, CONFIG.monitorTickIntervalMs);
   }
 
   async stop(): Promise<void> {
@@ -115,7 +113,7 @@ export class MonitorScheduler {
 
     let result: unknown;
     try {
-      result = await withTimeout(provider.executeRawQuery(query), QUERY_TIMEOUT_MS, `monitor "${monitor.name}"`);
+      result = await withTimeout(provider.executeRawQuery(query), CONFIG.monitorQueryTimeoutMs, `monitor "${monitor.name}"`);
     } catch (err) {
       console.warn(`[monitor] "${monitor.name}" query error:`, err);
       this.setMonitorStatus(monitor.id, "error", now);

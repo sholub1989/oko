@@ -11,6 +11,8 @@ import type { Db } from "../db/client.js";
 import { buildOrchestratorPrompt } from "../lib/shared-prompts.js";
 import type { McpProvider } from "./mcp-provider.js";
 import type { McpServerDefinition } from "./definitions.js";
+import { CONFIG, DEFAULTS, SETTINGS_KEYS } from "../config.js";
+import { readAppSetting } from "../db/config-reader.js";
 
 /**
  * Extract displayable content from an MCP tool result.
@@ -66,7 +68,7 @@ export function isTransportError(err: unknown): boolean {
  * The full data is stored in collectedQueries for the UI; the model only needs a summary.
  * Anthropic's API truncates tool results at 100k chars — we stay well under that.
  */
-const MAX_MODEL_RESULT_CHARS = 8_000;
+const MAX_MODEL_RESULT_CHARS = CONFIG.maxModelResultChars;
 
 function buildModelResult(normalized: unknown): string {
   if (Array.isArray(normalized)) {
@@ -227,6 +229,8 @@ User: "why is the checkout endpoint slow?"
           })
           .join("\n");
 
+        const maxSteps = readAppSetting<number>(db as Db, SETTINGS_KEYS.subAgentMaxSteps) ?? DEFAULTS.subAgentMaxSteps;
+
         const systemPrompt = `You are an autonomous agent with access to ${definition.label} via MCP tools. Use the tools below to answer the user's question.
 
 ## Available Tools
@@ -250,7 +254,7 @@ After ALL tool calls, you MUST write:
 2. **Key findings**: Concrete values — metric numbers, error messages, service names, timestamps, IDs, counts.
 3. **Remaining questions** (optional): What you could NOT answer and what to try next.
 
-You have a maximum of 30 steps.`;
+You have a maximum of ${maxSteps} steps.`;
 
         return runSubAgent({
           providerType: provider.type,
@@ -263,6 +267,7 @@ You have a maximum of 30 steps.`;
           collectedQueries,
           memoryContext,
           writer,
+          maxSteps,
           sessionId: writer?.sessionId,
           abortSignal,
         });

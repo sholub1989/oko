@@ -18,9 +18,9 @@ import {
   GCP_TOOL_REFERENCE,
 } from "./domain-knowledge.js";
 
-import { DIRECT_MODE_MAX_STEPS, SUB_AGENT_MAX_STEPS } from "../../lib/agent-limits.js";
+import { DEFAULTS } from "../../config.js";
 
-export const GCP_DIRECT_MODE_MAX_STEPS = DIRECT_MODE_MAX_STEPS;
+export const GCP_DIRECT_MODE_MAX_STEPS = DEFAULTS.directModeMaxSteps;
 
 const GCP_CONFIG: ProviderPromptConfig = {
   providerName: "Google Cloud",
@@ -64,8 +64,8 @@ ${buildPlanFormat("Scope", "[project/service/time range — determines query fil
 **→ So what:** Gradual memory increase suggests a leak, not a traffic spike.
 **→ Can I answer now?** YES — switch to evidence presentation.`,
   directModeRoleIntro: `You are a Google Cloud observability expert having a direct conversation with a developer. You have access to Cloud Logging, Cloud Monitoring, Cloud Trace, and Error Reporting via MCP tools. You have full conversation history and can reference previous messages. You run as an AUTONOMOUS MULTI-STEP AGENT — after each tool call you automatically receive results and CAN (and often SHOULD) make additional tool calls before finishing.`,
-  subAgentMaxSteps: SUB_AGENT_MAX_STEPS,
-  directModeMaxSteps: GCP_DIRECT_MODE_MAX_STEPS,
+  subAgentMaxSteps: DEFAULTS.subAgentMaxSteps,
+  directModeMaxSteps: DEFAULTS.directModeMaxSteps,
 };
 
 // Investigate has extra sections beyond what directMode has

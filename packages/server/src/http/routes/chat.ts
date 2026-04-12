@@ -1,33 +1,18 @@
-import { readFileSync, existsSync, statSync } from "node:fs";
-import { resolve, dirname, extname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { logger } from "hono/logger";
+import type { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import { trpcServer } from "@hono/trpc-server";
 import { createUIMessageStreamResponse, type UIMessage } from "ai";
 import { dashboardSessionId, SESSION_PREFIX, DEFAULT_SESSION_TITLE, DEFAULT_CHAT_MODE, type ChatMode } from "@oko/shared";
-import { appRouter } from "./trpc/router.js";
-import type { Context } from "./trpc/context.js";
-import { loadSessionMessages, runChatAgent } from "./agents/base-agent.js";
-import { collectChatTools } from "./tools/chat-tools.js";
-import { collectDashboardTools } from "./tools/dashboard-tools.js";
-import { collectMonitorTools } from "./tools/monitor-tools.js";
-import { generateSessionTitle } from "./agents/utility/title.js";
-import { resolveSubAgentModel } from "./llm/resolve.js";
-import { readAppSetting } from "./db/config-reader.js";
+import type { Context } from "../../trpc/context.js";
+import { loadSessionMessages, runChatAgent } from "../../agents/base-agent.js";
+import { collectChatTools } from "../../tools/chat-tools.js";
+import { collectDashboardTools } from "../../tools/dashboard-tools.js";
+import { collectMonitorTools } from "../../tools/monitor-tools.js";
+import { generateSessionTitle } from "../../agents/utility/title.js";
+import { resolveSubAgentModel } from "../../llm/resolve.js";
+import { readAppSetting } from "../../db/config-reader.js";
+import { SETTINGS_KEYS } from "../../config.js";
 
-export function createApp(context: Context) {
-  const app = new Hono();
-
-  app.use("*", logger((msg: string, ...rest: string[]) => {
-    console.log(decodeURIComponent(msg), ...rest);
-  }));
-  app.use("*", cors({ origin: "http://localhost:3579" }));
-
-  app.get("/health", (c) => c.json({ status: "ok" }));
-
+export function registerChatRoutes(app: Hono, context: Context): void {
   app.post("/api/chat", async (c) => {
     const { id, message, activeProvider } = await c.req.json<{ id: string; message: UIMessage; activeProvider?: string }>();
     const messages = loadSessionMessages(context.db, id, message);
@@ -42,7 +27,7 @@ export function createApp(context: Context) {
 
     // In direct mode, use the sub-agent model for the active provider
     // instead of the default chat model.
-    const mode = readAppSetting<ChatMode>(context.db, "chat_mode") ?? DEFAULT_CHAT_MODE;
+    const mode = readAppSetting<ChatMode>(context.db, SETTINGS_KEYS.chatMode) ?? DEFAULT_CHAT_MODE;
     const modelOverride = mode === "direct" && activeProvider
       ? resolveSubAgentModel(context.db, activeProvider)
       : undefined;
@@ -75,10 +60,7 @@ export function createApp(context: Context) {
       sessionId,
       messages,
       context,
-      collectTools: (writer) => {
-        const { tools, systemPrompt } = collectDashboardTools(context.providers, context.db, writer, dashboardId);
-        return { tools, systemPrompt };
-      },
+      collectTools: (writer) => collectDashboardTools(context.providers, context.db, writer, dashboardId),
       sessionTitle: () => "Dashboard Builder",
     });
 
@@ -87,7 +69,7 @@ export function createApp(context: Context) {
   });
 
   app.post("/api/monitor-chat", async (c) => {
-    const { id, message } = await c.req.json<{ id: string; message: UIMessage }>();
+    const { message } = await c.req.json<{ message: UIMessage }>();
     const sessionId = SESSION_PREFIX.MONITORS;
     const messages = loadSessionMessages(context.db, sessionId, message);
 
@@ -95,10 +77,7 @@ export function createApp(context: Context) {
       sessionId,
       messages,
       context,
-      collectTools: (writer) => {
-        const { tools, systemPrompt } = collectMonitorTools(context.providers, context.db, writer);
-        return { tools, systemPrompt };
-      },
+      collectTools: (writer) => collectMonitorTools(context.providers, context.db, writer),
       sessionTitle: () => "Monitor Builder",
     });
 
@@ -138,42 +117,4 @@ export function createApp(context: Context) {
       });
     });
   });
-
-  app.use(
-    "/api/trpc/*",
-    trpcServer({
-      endpoint: "/api/trpc",
-      router: appRouter,
-      createContext: () => context as unknown as Record<string, unknown>,
-    }),
-  );
-
-  // Serve static files — try multiple known locations for the web build
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const webCandidates = [
-    resolve(__dirname, "../../web/dist"),        // npm install: packages/server/dist/../../web/dist
-    resolve(process.cwd(), "packages/web/dist"), // dev production build from repo root
-  ];
-  const webRoot = webCandidates.find((d) => existsSync(resolve(d, "index.html")));
-  if (webRoot) {
-    const indexHtml = readFileSync(resolve(webRoot, "index.html"), "utf-8");
-    const mimeTypes: Record<string, string> = {
-      ".html": "text/html", ".css": "text/css", ".js": "application/javascript",
-      ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon",
-      ".json": "application/json", ".woff": "font/woff", ".woff2": "font/woff2",
-    };
-    app.use("*", async (c, next) => {
-      const reqPath = c.req.path.slice(1);
-      if (!reqPath) { await next(); return; }
-      const filePath = resolve(webRoot, reqPath);
-      if (filePath.startsWith(webRoot) && existsSync(filePath) && !statSync(filePath).isDirectory()) {
-        const mime = mimeTypes[extname(filePath)] || "application/octet-stream";
-        return c.body(readFileSync(filePath), { headers: { "Content-Type": mime } });
-      }
-      await next();
-    });
-    app.get("*", (c) => c.html(indexHtml));
-  }
-
-  return app;
 }

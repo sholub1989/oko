@@ -7,17 +7,14 @@ import { extractUsage, addTokenUsage, emptyUsage, recordAgentRun } from "../../l
 import { subAgentRuns, memoryOperations } from "../../db/schema.js";
 import { runMemoryAgent } from "../utility/memory.js";
 import type { ChatToolWriter as StreamWriter, ChatToolMemoryContext as MemoryContext } from "@oko/shared";
-import { SUB_AGENT_MAX_STEPS } from "../../lib/agent-limits.js";
+import { DEFAULTS, SETTINGS_KEYS } from "../../config.js";
+import { readAppSetting } from "../../db/config-reader.js";
 import { getCurrentDateBlock } from "../../lib/current-context.js";
 
 export interface SubAgentQuery {
   query: string;
   results: unknown;
 }
-
-// ── Sub-agent runner ──
-
-const MAX_STEPS = SUB_AGENT_MAX_STEPS;
 
 export interface RunSubAgentOptions {
   providerType: string;
@@ -33,6 +30,8 @@ export interface RunSubAgentOptions {
   collectedQueries: SubAgentQuery[];
   memoryContext?: MemoryContext;
   writer?: StreamWriter;
+  /** Pre-resolved max steps (avoids duplicate DB read if caller already fetched it). */
+  maxSteps?: number;
   sessionId?: string;
   abortSignal?: AbortSignal;
 }
@@ -102,13 +101,14 @@ export async function runSubAgent(opts: RunSubAgentOptions): Promise<RunSubAgent
     return { error: resolved.error };
   }
 
+  const MAX_STEPS = opts.maxSteps ?? readAppSetting<number>(db, SETTINGS_KEYS.subAgentMaxSteps) ?? DEFAULTS.subAgentMaxSteps;
   const startTime = Date.now();
 
   // Build sub-agent tool set
   const subAgentTools: Record<string, any> = { ...queryTools };
 
   const fullSystemPrompt = injectMemories(systemPrompt, memoryContext)
-    + "\n\n" + getCurrentDateBlock();
+    + "\n\n" + getCurrentDateBlock(db);
 
   const queryToolNameSet = new Set(queryToolNames);
   const prompt = `Task: ${task}`;

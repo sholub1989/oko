@@ -3,18 +3,13 @@ import { ReactGridLayout, WidthProvider, type Layout } from "react-grid-layout/l
 import "react-grid-layout/css/styles.css";
 import { theme } from "../lib/theme";
 import { trpc } from "../lib/trpc";
+import { WEB_CONFIG } from "../lib/config";
 import { WidgetCard } from "../components/dashboard/WidgetCard";
 import { DashboardChatPanel } from "../components/dashboard/DashboardChatPanel";
 import { DEFAULT_SINCE } from "../lib/nrql-utils";
 import { TimeRangePicker } from "../components/ui/TimeRangePicker";
 
 const GridLayout = WidthProvider(ReactGridLayout);
-
-/** 12×12 uniform grid — both axes have the same granularity */
-const GRID_ROWS = 12;
-const GRID_COLS = 12;
-const MIN_ROW_HEIGHT = 20;
-const GRID_MARGIN: [number, number] = [8, 8];
 
 function EditableTitle({ dashboardId, title }: { dashboardId: string; title: string }) {
   const [editing, setEditing] = useState(false);
@@ -122,9 +117,9 @@ function DashboardContent({ dashboardId, title, initialChatOpen = true }: {
     const compute = () => {
       const h = el.clientHeight;
       if (h > 0) {
-        // Divide visible height into GRID_ROWS equal rows (minus margins)
-        const totalMargin = (GRID_ROWS + 1) * GRID_MARGIN[1];
-        const rh = Math.max(Math.floor((h - totalMargin) / GRID_ROWS), MIN_ROW_HEIGHT);
+        // Divide visible height into WEB_CONFIG.gridRows equal rows (minus margins)
+        const totalMargin = (WEB_CONFIG.gridRows + 1) * WEB_CONFIG.gridMargin[1];
+        const rh = Math.max(Math.floor((h - totalMargin) / WEB_CONFIG.gridRows), WEB_CONFIG.gridMinRowHeight);
         setRowHeight(rh);
       }
     };
@@ -206,9 +201,9 @@ function DashboardContent({ dashboardId, title, initialChatOpen = true }: {
           ) : (
             <GridLayout
               layout={layout}
-              cols={GRID_COLS}
+              cols={WEB_CONFIG.gridCols}
               rowHeight={rowHeight}
-              margin={GRID_MARGIN}
+              margin={WEB_CONFIG.gridMargin}
               draggableHandle=".drag-handle"
               onDragStart={() => { isDragging.current = true; }}
               onResizeStart={() => { isDragging.current = true; }}

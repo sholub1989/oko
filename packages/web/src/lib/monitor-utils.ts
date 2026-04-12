@@ -1,5 +1,6 @@
 import { substituteTimeRange } from "@oko/shared";
 import type { Threshold } from "../components/charts/ChartView";
+import { WEB_CONFIG } from "./config";
 
 export const MONITOR_PRESETS = [
   { label: "1 hour", since: "1 hour ago" },
@@ -19,7 +20,7 @@ export function sinceToSeconds(since: string): number {
   return n * 86400;
 }
 
-export const MAX_BUCKETS = 366;
+export const MAX_BUCKETS = WEB_CONFIG.maxBuckets;
 
 /**
  * Build TIMESERIES clause with bucket size = multiple of the monitor's

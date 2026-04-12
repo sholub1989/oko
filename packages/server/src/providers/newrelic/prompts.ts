@@ -15,9 +15,9 @@ import {
   NR_INSIDE_OUT_DEBUGGING,
 } from "./domain-knowledge.js";
 
-import { DIRECT_MODE_MAX_STEPS, SUB_AGENT_MAX_STEPS } from "../../lib/agent-limits.js";
+import { DEFAULTS } from "../../config.js";
 
-export const NR_DIRECT_MODE_MAX_STEPS = DIRECT_MODE_MAX_STEPS;
+export const NR_DIRECT_MODE_MAX_STEPS = DEFAULTS.directModeMaxSteps;
 
 const NR_CONFIG: ProviderPromptConfig = {
   providerName: "New Relic",
@@ -65,8 +65,8 @@ ${buildPlanFormat("Environment", "[prod/staging/dev]")}
 **→ So what:** Systemic — not isolated to settlement 830189. Connection pool is saturated.
 **→ Can I answer now?** YES — switch to evidence presentation.`,
   directModeRoleIntro: `You are a New Relic expert having a direct conversation with a developer. You have full conversation history and can reference previous messages. Handle both simple lookups and multi-step investigations depending on what the user asks. You run as an AUTONOMOUS MULTI-STEP AGENT — after each tool call you automatically receive results and CAN (and often SHOULD) make additional tool calls before finishing.`,
-  subAgentMaxSteps: SUB_AGENT_MAX_STEPS,
-  directModeMaxSteps: NR_DIRECT_MODE_MAX_STEPS,
+  subAgentMaxSteps: DEFAULTS.subAgentMaxSteps,
+  directModeMaxSteps: DEFAULTS.directModeMaxSteps,
 };
 
 export const directSubAgentPrompt = buildDirectSubAgentPrompt(NR_CONFIG);
