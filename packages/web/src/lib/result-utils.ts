@@ -26,6 +26,16 @@ export function isPercentileResult(value: unknown): boolean {
   return keys.length === 1 && !isNaN(Number(keys[0]));
 }
 
+/** Coerce a NerdGraph cell to a chartable number. Unwraps percentile objects; returns null otherwise. */
+export function coerceNumeric(value: unknown): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (isPercentileResult(value)) {
+    const inner = Object.values(value as object)[0];
+    return typeof inner === "number" && Number.isFinite(inner) ? inner : null;
+  }
+  return null;
+}
+
 export function formatValue(value: unknown, key?: string): string {
   if (value == null) return "—";
   if (typeof value === "number") {
