@@ -3,7 +3,7 @@ import { Streamdown } from "streamdown";
 import { theme } from "../../lib/theme";
 import { TimeseriesChart, HistogramChart, type Threshold } from "./ChartView";
 import { JsonTree } from "../ui/JsonTree";
-import { HIDDEN_KEYS, formatValue, isPercentileResult, buildColumns, pivotCompareWith, type Column } from "../../lib/result-utils";
+import { HIDDEN_KEYS, formatValue, isPercentileResult, buildColumns, pivotCompareWith, coerceNumeric, type Column } from "../../lib/result-utils";
 import { ScalarCards } from "./ScalarCards";
 
 function CellText({ value }: { value: string }) {
@@ -239,7 +239,7 @@ export default memo(function ResultView({ data, containerSize, threshold, chartT
     rows.length === 1 &&
     !hasFacet &&
     metricKeys.length > 0 &&
-    metricKeys.every((c) => typeof c.get(rows[0]) === "number");
+    metricKeys.every((c) => coerceNumeric(c.get(rows[0])) !== null);
 
   if (isScalar) {
     return <ScalarCards columns={metricKeys} row={rows[0]} />;

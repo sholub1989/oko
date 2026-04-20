@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import { theme, colors } from "../../lib/theme";
 import { useContainerSize } from "../../lib/hooks";
+import { coerceNumeric } from "../../lib/result-utils";
 
 const SKIP_KEYS = new Set(["beginTimeSeconds", "endTimeSeconds", "inspectedCount", "facet", "comparison"]);
 
@@ -28,6 +29,7 @@ function formatTime(unix: number): string {
 }
 
 function formatYAxis(value: unknown): string {
+  if (value == null) return "—";
   const n = Number(value);
   if (isNaN(n)) return String(value);
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -61,7 +63,7 @@ const TOOLTIP_ITEM_STYLE = { color: colors.inkLight };
 interface LineChartProps {
   width: number;
   height: number;
-  series: { name: string; data: { x: number; y: number }[]; color: string; dashed?: boolean }[];
+  series: { name: string; data: { x: number; y: number | null }[]; color: string; dashed?: boolean }[];
   formatX: (v: number) => string;
   threshold?: Threshold;
 }
@@ -247,7 +249,7 @@ function SimpleTimeseriesChart({ rows, containerSize, threshold }: { rows: Recor
     metricKeys.map((k, i) => ({
       name: k,
       color: theme.chartColors[i % theme.chartColors.length],
-      data: rows.map((r) => ({ x: r.beginTimeSeconds as number, y: (r[k] as number) ?? 0 })),
+      data: rows.map((r) => ({ x: r.beginTimeSeconds as number, y: coerceNumeric(r[k]) })),
     })),
   [rows, metricKeys]);
 
@@ -282,18 +284,18 @@ function FacetTimeseriesChart({ rows, containerSize, threshold }: { rows: Record
     for (const r of rows) timeSet.add(r.beginTimeSeconds as number);
     const times = [...timeSet].sort((a, b) => a - b);
 
-    const lookup = new Map<number, Map<string, number>>();
+    const lookup = new Map<number, Map<string, number | null>>();
     for (const r of rows) {
       const t = r.beginTimeSeconds as number;
       const label = Array.isArray(r.facet) ? (r.facet as string[]).join(", ") : String(r.facet);
       if (!lookup.has(t)) lookup.set(t, new Map());
-      lookup.get(t)!.set(label, r[metricKey] as number);
+      lookup.get(t)!.set(label, coerceNumeric(r[metricKey]));
     }
 
     return labels.map((label, i) => ({
       name: label,
       color: theme.chartColors[i % theme.chartColors.length],
-      data: times.map((t) => ({ x: t, y: lookup.get(t)?.get(label) ?? 0 })),
+      data: times.map((t) => ({ x: t, y: lookup.get(t)?.get(label) ?? null })),
     }));
   }, [rows]);
 
@@ -350,7 +352,7 @@ function CompareTimeseriesChart({ rows, containerSize }: { rows: Record<string, 
       data: (periodRows.get(p) ?? [])
         .map((r) => ({
           x: (r.beginTimeSeconds as number) + (p !== "current" ? timeOffset : 0),
-          y: (r[mKey] as number) ?? 0,
+          y: coerceNumeric(r[mKey]),
         }))
         .sort((a, b) => a.x - b.x),
     }));
